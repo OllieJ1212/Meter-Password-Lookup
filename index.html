@@ -84,11 +84,11 @@
       elResults.appendChild(card);
     }
   }
-  function search(){
-    const q=(prefixInput.value||'').trim().toUpperCase();
-    const items = DATA.filter(r=> r.prefix.startsWith(q));
-    render(items.slice(0,30));
-  }
+function search() {
+  const q = (prefixInput.value || '').trim().toUpperCase();
+  const items = DATA.filter(r => (r.prefix || '').toUpperCase().startsWith(q));
+  render(items); // <-- no slice; shows all matches
+}
   document.addEventListener('click', (e)=>{
     const t=e.target;
     if(t.classList.contains('copy')){
