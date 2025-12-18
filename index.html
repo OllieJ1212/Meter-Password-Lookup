@@ -58,31 +58,69 @@
     if(p==null || isNaN(p)) return '—';
     return (Math.round(p*1000)/10).toFixed(1) + '%';
   }
-  function render(items){
-    elResults.innerHTML='';
-    if(!items.length){ elEmpty.style.display='block'; return; } else { elEmpty.style.display='none'; }
-    for(const it of items){
-      const card=document.createElement('div');
-      card.className='card';
-      card.innerHTML=`
-        <div class="row">
-          <div>
-            <div><strong>Prefix:</strong> ${it.prefix}</div>
-            <div class="muted">${it.meterType||''}</div>
-          </div>
+ 
+function render(items) {
+  // Helper: format percentages consistently
+  function formatPct(p) {
+    const v = Math.max(0, Math.min(100, p));
+    const rounded = Math.round(v * 10) / 10;
+    return (v < 1 || rounded % 1 !== 0) ? `${rounded.toFixed(1)}%` : `${rounded.toFixed(0)}%`;
+  }
+
+  // Helper: compute percentage for an option
+  function percentageForOption(o, totalN) {
+    if (typeof o.prop === 'number') return o.prop * 100; // prop is 0–1
+    const base = typeof o.n === 'number' ? o.n : 0;      // fallback to count n
+    return totalN > 0 ? (base / totalN) * 100 : 0;
+  }
+
+  elResults.innerHTML = '';
+  if (!items.length) {
+    elEmpty.style.display = 'block';
+    return;
+  } else {
+    elEmpty.style.display = 'none';
+  }
+
+  for (const it of items) {
+    // Compute total 'n' once per item to support percentage from counts
+    const totalN = Array.isArray(it.options)
+      ? it.options.reduce((s, o) => s + (typeof o.n === 'number' ? o.n : 0), 0)
+      : 0;
+
+    // Build ALL options with percentage + text, sorted by percentage desc
+    const opts = (it.options || [])
+      .map(o => {
+        const pctVal = percentageForOption(o, totalN);
+        return {
+          ...o,
+          _pct: pctVal,
+          _pctText: formatPct(pctVal)
+        };
+      })
+      .sort((a, b) => b._pct - a._pct); // highest first
+
+    const card = document.createElement('div');
+    card.className = 'card';
+    card.innerHTML = `
+      <div class="row">
+        <div>
+          <div><strong>Prefix:</strong> ${it.prefix}</div>
+          <div class="muted">${it.meterType || ''}</div>
         </div>
-        <div class="options">
-          ${it.options.map(o=>`
-            <div class="opt">
-              <div class="label">${o.display}</div>
-              <div style="display:flex;gap:8px;align-items:center;">
-                <span class="pct">${pct(o.prop)}</span>
-                <button class="copy" data-text="${o.display}">Copy</button>
-              </div>
-            </div>`).join('')}
-        </div>`;
-      elResults.appendChild(card);
-    }
+      </div>
+      <div class="options">
+        ${opts.map((o, idx) => `
+          <div class="opt${idx < 3 ? ' top' : ''}">
+            <div class="label">${o.display}</div>
+            <div style="display:flex;gap:8px;align-items:center;">
+              <span class="pct">${o._pctText}</span>
+              <button class="copy" data-text="${o.display}">Copy</button>
+            </div>
+          </div>
+        `).join('')}
+      </div>`;
+    elResults.appendChild    elResults.appendChild(card);
   }
 function search() {
   const q = (prefixInput.value || '').trim().toUpperCase();
